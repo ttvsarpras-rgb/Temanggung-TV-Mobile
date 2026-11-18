@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "FavoriteBroadcast": {
+      "title": "FavoriteBroadcast",
+      "description": "A broadcast channel or scheduled Temanggung TV program saved to a user's favorites list.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "itemId": {
+          "type": "string",
+          "description": "Unique identifier of the channel or program.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "itemType": {
+          "type": "string",
+          "description": "Type of saved broadcast item.",
+          "enum": ["channel", "program", "moment"]
+        },
+        "title": {
+          "type": "string",
+          "description": "Display title of the broadcast or program.",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "category": {
+          "type": "string",
+          "description": "Program category such as Berita, Budaya, Agrobisnis, or Siaran Langsung.",
+          "minLength": 1,
+          "maxLength": 50
+        },
+        "scheduleTime": {
+          "type": "string",
+          "description": "Broadcast time window or live label.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "streamUrl": {
+          "type": "string",
+          "description": "Associated SRT stream URL.",
+          "minLength": 1,
+          "maxLength": 240
+        },
+        "note": {
+          "type": "string",
+          "description": "Optional user note or reminder memo.",
+          "maxLength": 240
+        },
+        "reminderEnabled": {
+          "type": "boolean",
+          "description": "Whether the user wants a visual reminder badge for this favorite."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when favorite was saved."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when favorite was last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "itemId",
+        "itemType",
+        "title",
+        "category",
+        "scheduleTime",
+        "streamUrl",
+        "reminderEnabled",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "PlaybackPreference": {
+      "title": "PlaybackPreference",
+      "description": "User streaming quality and mobile playback settings.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Owner Firebase Auth UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "preferredQuality": {
+          "type": "string",
+          "description": "Selected streaming quality preset.",
+          "enum": ["auto", "1080p", "720p", "480p"]
+        },
+        "dataSaver": {
+          "type": "boolean",
+          "description": "Whether mobile data saver mode is active."
+        },
+        "autoPlay": {
+          "type": "boolean",
+          "description": "Whether live stream starts automatically when opening the app."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when preferences were last updated."
+        }
+      },
+      "required": [
+        "userId",
+        "preferredQuality",
+        "dataSaver",
+        "autoPlay",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/favorites/{favoriteId}": {
+      "schema": { "$ref": "#/entities/FavoriteBroadcast" },
+      "description": "Stores each user's saved favorite broadcasts, programs, and live moments."
+    },
+    "/users/{userId}/preferences/{prefId}": {
+      "schema": { "$ref": "#/entities/PlaybackPreference" },
+      "description": "Stores each user's mobile streaming quality and playback preferences."
+    }
+  }
+}

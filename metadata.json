@@ -1,0 +1,6 @@
+{
+  "name": "Temanggung TV",
+  "description": "Aplikasi streaming siaran langsung Temanggung TV dari sumber SRT dengan kualitas adaptif lancar untuk HP Android dan simpan siaran favorit.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

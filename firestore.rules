@@ -1,0 +1,156 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Default-Deny)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable Hardened Primitives
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Validation Blueprint: FavoriteBroadcast
+    function isValidFavorite(data) {
+      return data.keys().hasAll([
+          'userId',
+          'itemId',
+          'itemType',
+          'title',
+          'category',
+          'scheduleTime',
+          'streamUrl',
+          'reminderEnabled',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'itemId',
+          'itemType',
+          'title',
+          'category',
+          'scheduleTime',
+          'streamUrl',
+          'note',
+          'reminderEnabled',
+          'createdAt',
+          'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && isValidId(data.itemId)
+        && data.itemType in ['channel', 'program', 'moment']
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 120
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 50
+        && data.scheduleTime is string && data.scheduleTime.size() >= 1 && data.scheduleTime.size() <= 60
+        && data.streamUrl is string && data.streamUrl.size() >= 1 && data.streamUrl.size() <= 240
+        && (!('note' in data) || (data.note is string && data.note.size() <= 240))
+        && data.reminderEnabled is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Validation Blueprint: PlaybackPreference
+    function isValidPlaybackPref(data) {
+      return data.keys().hasAll([
+          'userId',
+          'preferredQuality',
+          'dataSaver',
+          'autoPlay',
+          'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'userId',
+          'preferredQuality',
+          'dataSaver',
+          'autoPlay',
+          'updatedAt'
+        ])
+        && isValidId(data.userId)
+        && data.userId == request.auth.uid
+        && data.preferredQuality in ['auto', '1080p', '720p', '480p']
+        && data.dataSaver is bool
+        && data.autoPlay is bool
+        && data.updatedAt is timestamp;
+    }
+
+    // User Favorites Subcollection
+    match /users/{userId}/favorites/{favoriteId} {
+      allow get: if isOwner(userId) && isValidId(favoriteId);
+      allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidId(favoriteId)
+        && isValidFavorite(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidId(favoriteId)
+        && isValidFavorite(incoming())
+        && incoming().userId == existing().userId
+        && incoming().itemId == existing().itemId
+        && incoming().itemType == existing().itemType
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['note', 'reminderEnabled', 'updatedAt'])
+          || incoming().diff(existing()).affectedKeys().hasOnly(['title', 'category', 'scheduleTime', 'streamUrl', 'note', 'reminderEnabled', 'updatedAt'])
+        );
+
+      allow delete: if isOwner(userId) && isValidId(favoriteId);
+    }
+
+    // User Playback Preferences Subcollection
+    match /users/{userId}/preferences/{prefId} {
+      allow get: if isOwner(userId) && isValidId(prefId);
+      allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && prefId == 'playback'
+        && isValidPlaybackPref(incoming())
+        && incoming().updatedAt == request.time;
+
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && prefId == 'playback'
+        && isValidPlaybackPref(incoming())
+        && incoming().userId == existing().userId
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'preferredQuality',
+          'dataSaver',
+          'autoPlay',
+          'updatedAt'
+        ]);
+
+      allow delete: if isOwner(userId) && isValidId(prefId);
+    }
+  }
+}
